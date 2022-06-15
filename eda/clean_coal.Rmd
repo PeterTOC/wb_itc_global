@@ -1,0 +1,34 @@
+---
+title: "Coal Exploration"
+author: "Peter Boshe"
+date: "2022-06-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# load libraries
+library(tidyverse)
+library(GGally)
+
+# parameters
+  #input
+file_raw <- here::here("data/clean_coal.rds")
+```
+
+
+
+```{r}
+
+# load the dataset and explore
+clean_coal <- read_rds(file_raw)
+clean_coal |> 
+  ggpairs(columns = c(2,5,6,7,8,9),
+          mapping = ggplot2::aes(color = commodity),
+          diag = list(alpha = 0.5))
+```
+
