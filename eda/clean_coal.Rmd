@@ -6,18 +6,24 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 
 ```{r}
 # load libraries
 library(tidyverse)
+library(ggridges)
 library(GGally)
+library(janitor)
 
 # parameters
   #input
 file_raw <- here::here("data/clean_coal.rds")
+
+# set theme
+theme_set(theme_bw())
+
 ```
 
 
@@ -31,4 +37,149 @@ clean_coal |>
           mapping = ggplot2::aes(color = commodity),
           diag = list(alpha = 0.5))
 ```
+
+
+
+```{r}
+clean_coal_sum <- clean_coal |> 
+  pivot_wider(names_from = trade,
+              values_from = value_usd) |>
+  mutate(imp = round(imp),
+         exp = round(exp)) |> # to approximate the 0.01 to 0 
+  group_by(year) |> 
+  summarise(total_exp = sum(exp),
+            total_imp = sum(imp),
+            count = n())
+
+# to be joined to the original dataset
+
+clean_coal_sum |> 
+  pivot_longer(cols = starts_with("total_"),
+               names_to = "trade",
+               values_to = "value",
+               names_prefix = "total_") |> 
+  ggplot(aes(year, value, fill = trade)) + 
+  geom_col(position = "dodge",
+           stat = "identity",
+           alpha = 0.8) + 
+  scale_y_log10(labels = scales::dollar)
+
+
+```
+
+## import and export before 2012
+
+
+```{r}
+clean_coal_sum |> 
+  filter(year< 2012) |> 
+  summarise(total_imp = sum(total_imp),
+            total_exp = sum(total_exp))
+```
+## total number import and export
+
+```{r}
+clean_coal_sum |>
+  summarise(total_imp = sum(total_imp),
+            total_exp = sum(total_exp))
+```
+
+
+
+## trade value import and export
+
+```{r}
+
+clean_coal |> 
+  filter(value_usd > 1 ) |> 
+  ggplot(aes(value_usd, fill= trade, color = trade)) +
+  geom_histogram(position = "identity",
+                 alpha = 0.5,
+                 binwidth = 1) +
+  scale_x_log10(labels = scales::dollar)
+```
+
+
+## commodity, years, trade value
+
+
+```{r}
+clean_coal |> 
+  ggplot(aes(value_usd, year, fill = trade, group = year)) +
+  geom_density_ridges(scales = 1,
+                      alpha = 0.7) +
+  scale_x_log10(labels = scales::dollar) +
+  facet_wrap( ~ trade)# TODO to animate graphs above
+```
+
+
+## trade, commodity
+
+```{r}
+clean_coal |> 
+  tabyl(trade,commodity)
+# FIX cleaning script must have an issue, consider building a data validator
+# maybe we should have pivoted longer before ommiting NAs
+```
+ - we have a problem here
+
+## coal rent, years
+
+```{r}
+clean_coal |> 
+  ggplot(aes(year, coal_rent_pct_of_gdp)) + 
+  geom_line()
+```
+
+
+## coal rent, trade
+
+
+
+## natural capital, years
+
+```{r}
+clean_coal |> 
+  ggplot(aes(year, natural_capital)) + 
+  geom_line()
+```
+
+
+## coal rent, natural capital
+
+
+```{r}
+clean_coal |> 
+  ggplot(aes(coal_rent_pct_of_gdp, natural_capital, color = as.factor(year))) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm",
+              color = "darkgrey",
+              lty = 2)
+
+```
+
+## network analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
