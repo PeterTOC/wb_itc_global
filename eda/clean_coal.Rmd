@@ -109,15 +109,9 @@ clean_coal |>
   geom_density_ridges(scales = 1,
                       alpha = 0.7) +
   scale_x_log10(labels = scales::dollar) +
-<<<<<<< HEAD
   facet_wrap( ~ trade)# TODO to animate graphs above
 ```
 
-=======
-  facet_wrap( ~ trade)
-```
-# TODO to animate graphs above
->>>>>>> 4bda1eda13b605b5aecd3c7c8bc1a22eb275e802
 
 ## trade, commodity
 
@@ -127,6 +121,7 @@ clean_coal |>
 # FIX cleaning script must have an issue, consider building a data validator
 # maybe we should have pivoted longer before ommiting NAs
 ```
+ 
  - we have a problem here
 
 ## coal rent, years
@@ -140,11 +135,8 @@ clean_coal |>
 
 ## coal rent, trade
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 4bda1eda13b605b5aecd3c7c8bc1a22eb275e802
 ## natural capital, years
 
 ```{r}
