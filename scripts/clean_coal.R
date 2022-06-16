@@ -60,15 +60,16 @@ coal_df |>
   )) |>
   select(-commodity_code) |> # drop the commodity code
   arrange(year) |>
-  na.omit() |>  # drop rows with missing variables
   mutate(trade_id = row_number()) |>
   select(trade_id,everything()) |>
+  pivot_longer(cols = starts_with("trade_value_"),
+               names_to = "trade",
+               values_to = "value_usd",
+               names_prefix = "trade_value_usd_") |>
+  mutate(trade = as_factor(trade),
+         value_usd = value_usd + 0.01) |>
+  na.omit() |>  # drop rows with missing variables
   write_rds(file_out)
 
 
-library(GGally)
-clean_coal |>
-  ggpairs(columns = c(2,5,6,7,8,9),
-          mapping = ggplot2::aes(color = commodity),
-          diag = list(alpha = 0.5))
 
