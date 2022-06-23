@@ -44,8 +44,8 @@ clean_coal |>
 clean_coal_sum <- clean_coal |> 
   pivot_wider(names_from = trade,
               values_from = value_usd) |>
-  mutate(imp = round(imp),
-         exp = round(exp)) |> # to approximate the 0.01 to 0 
+  replace_na(list(imp = 0,
+                  exp = 0)) |>
   group_by(year) |> 
   summarise(total_exp = sum(exp),
             total_imp = sum(imp),
@@ -104,6 +104,8 @@ clean_coal |>
 
 
 ```{r}
+
+
 clean_coal |> 
   ggplot(aes(value_usd, year, fill = trade, group = year)) +
   geom_density_ridges(scales = 1,
@@ -122,7 +124,19 @@ clean_coal |>
 # maybe we should have pivoted longer before ommiting NAs
 ```
  
- - we have a problem here
+ - we have a problem here, fixed
+ 
+ 
+## use code as startpoint to separate the trading instances
+ 
+```{r}
+clean_coal |> 
+  tabyl(trade,partner_iso)
+
+#to simply have a dataframe of export countries and one for import countries
+# the 
+```
+ 
 
 ## coal rent, years
 
@@ -159,12 +173,134 @@ clean_coal |>
 
 ```
 
-## network analysis
+## network analysis/connection map
+
+### method 1
+
+```{r}
+library(countrycode)
+library(rnaturalearth)
+library(raster)
+
+# load in map object
+map <- ne_countries()
+
+# add the trade value and import export categories to the map obj
+map$trade <- as_vector(clean_coal[match(map$iso_a3,str_to_upper(clean_coal$partner_iso)), "trade"])
+map$value_usd <- as_vector(clean_coal[match(map$iso_a3,str_to_upper(clean_coal$partner_iso)), "value_usd"])
+
+plot(map)
 
 
+```
 
 
+### method 2
 
+```{r}
+
+library(maps)
+library(geosphere)
+# import iso2c, country name, longitude and latitude data
+
+countries_clean_coal <- clean_coal |> 
+  mutate(partner = map_chr(partner_iso, ~ countrycode(., origin = "iso3c", destination = "country.name")),
+        reporter = map_chr(reporter_iso, ~ countrycode(., origin = "iso3c", destination = "country.name")))
+
+partner_countries <- countries_clean_coal |> 
+  distinct(partner_iso, partner)
+
+reporter_countries <- countries_clean_coal |> 
+  distinct(reporter_iso,reporter)
+
+# import longitude and latitude dataframe
+countries_metadata <- read_csv("https://gist.githubusercontent.com/tadast/8827699/raw/f5cac3d42d16b78348610fc4ec301e9234f82821/countries_codes_and_coordinates.csv")
+
+#clean the imported dataframe
+countries_metadata <- countries_metadata |> 
+  mutate_if(is.character, str_to_lower) |> 
+  clean_names()  |> 
+  dplyr::select(-numeric_code) |> 
+  rename(latitude = latitude_average,
+         longitude = longitude_average)
+
+#create data frames for the partner and reporter countries
+partner_coord <- partner_countries |> 
+  left_join(countries_metadata, by = c("partner_iso" = "alpha_3_code"))
+
+reporter_coord <- reporter_countries |> 
+  left_join(countries_metadata, by = c("reporter_iso" = "alpha_3_code"))
+
+# create a base map
+map("world", 
+    fill=T, 
+    col="grey8", 
+    bg="grey15")
+
+# overlay the traders
+
+points(partner_coord$longitude, 
+       partner_coord$latitude,
+       pch = 3,
+       cex=0.1,
+       col = "red")
+
+# create the connections
+for (i in (1:dim(partner_coord)[1])) { 
+inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord$longitude[i], partner_coord$latitude[i]), n=200)
+lines(inter, lwd=0.5, col="yellow")    
+}
+
+
+```
+
+## stickman figures
+
+```{r}
+library(sysfonts)
+library(ggplot2)
+library(xkcd)
+font.add("xkcd", regular = "xkcd.ttf")
+
+
+ratioxy <- diff(xrange)/diff(yrange)
+mapping <- aes(x, y,
+scale,
+ratioxy,
+angleofspine ,
+anglerighthumerus,
+anglelefthumerus,
+anglerightradius,
+angleleftradius,
+anglerightleg,
+angleleftleg,
+angleofneck)
+
+dataman <- data.frame(x= 15, y= 4,
+scale = 0.4,
+ratioxy = ratioxy,
+angleofspine = -pi/2 ,
+anglerighthumerus =  -pi/6,
+anglelefthumerus = pi + pi/6,
+anglerightradius = -pi/3,
+angleleftradius = -pi/3,
+anglerightleg = 3*pi/2 - pi / 12,
+angleleftleg = 3*pi/2 + pi / 12 ,
+angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
+
+g <- ggplot() + 
+  # xkcdaxis(xrange,yrange) +
+  xkcdman(mapping,linetype = 3, dataman) + 
+  theme_void() +
+  annotate("text", x = 17, y = 5, label = "Some text", size = 7, family = "xkcd") +
+  theme(line = element_blank(),
+        text = element_text('xkcd')) +
+  annotate("rect", xmin = 14.5, xmax = 19.5, ymin = 4.5, ymax = 5.3,
+  alpha = .2) +
+  annotate("segment",x = 16.2, xend = 16.6 ,
+             y = 4.2, yend = 4.4, curvature = 1) 
+g
+```
 
 
 

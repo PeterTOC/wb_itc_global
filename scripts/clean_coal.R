@@ -14,6 +14,7 @@ library(GGally)
 file_raw <- here::here("data/coal_data.rds")
   # output
 file_out <- here::here("data/clean_coal.rds")
+
 # ============================================================================
 
 # Code
@@ -69,6 +70,7 @@ coal_df |>
   mutate(trade = as_factor(trade),
          value_usd = value_usd + 0.01) |>
   na.omit() |>  # drop rows with missing variables
+  filter(value_usd > 1)|>
   write_rds(file_out)
 
 
