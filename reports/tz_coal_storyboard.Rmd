@@ -68,9 +68,10 @@ partner_countries <- countries_clean_coal |>
 
 reporter_countries <- countries_clean_coal |> 
   distinct(reporter_iso,reporter)
-
+# TODO need to import and save this dataset
 # import longitude and latitude dataframe
 countries_metadata <- read_csv("https://gist.githubusercontent.com/tadast/8827699/raw/f5cac3d42d16b78348610fc4ec301e9234f82821/countries_codes_and_coordinates.csv")
+
 
 #clean the imported dataframe
 countries_metadata <- countries_metadata |> 
@@ -82,32 +83,44 @@ countries_metadata <- countries_metadata |>
 
 #create data frames for the partner and reporter countries
 partner_coord <- partner_countries |> 
-  left_join(countries_metadata, by = c("partner_iso" = "alpha_3_code"))
+  left_join(countries_metadata, by = c("partner_iso" = "alpha_3_code")) |> 
+  distinct(latitude,longitude, .keep_all = TRUE) 
+
+#to simply have a dataframe of export countries and one for import countries
+partner_imp <- clean_coal |> filter(trade == "imp") |> distinct(partner_iso)
+partner_exp <- clean_coal |> filter(trade == "exp") |> distinct(partner_iso)
+
+#separate the data by trade type
+partner_coord_imp <- partner_imp |> left_join(partner_coord, by = "partner_iso") 
+partner_coord_exp <- partner_exp |> left_join(partner_coord, by = "partner_iso") 
 
 reporter_coord <- reporter_countries |> 
   left_join(countries_metadata, by = c("reporter_iso" = "alpha_3_code"))
 
-
 # create a base map
 map("world", 
     fill=T, 
-    col="#40403D", 
-    bg="#D3D3D3")
+    col="grey8", 
+    bg="grey15")
 
 # overlay the traders
 
 points(partner_coord$longitude, 
        partner_coord$latitude,
-       pch = 1,
+       pch = 3,
        cex=0.1,
-       col = "red",
-       bg = "red",
-       lwd = 1)
+       col = "red")
 
-# create the connections
-for (i in (1:dim(partner_coord)[1])) { 
-inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord$longitude[i], partner_coord$latitude[i]), n=200)
-lines(inter, lwd=1.5, col="yellow")    
+# create the connections for imports
+for (i in (1:dim(partner_coord_imp)[1])) { 
+inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_imp$longitude[i], partner_coord_imp$latitude[i]), n=200)
+lines(inter, lwd=1, col="yellow")    
+}
+
+# create the connections for export
+for (i in (1:dim(partner_coord_exp)[1])) { 
+inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_exp$longitude[i], partner_coord_exp$latitude[i]), n=200)
+lines(inter, lwd=1, col="green")    
 }
 
 
@@ -140,15 +153,15 @@ dataman <- data.frame(x= 0, y= 2,
 scale = 2,
 ratioxy = ratioxy,
 angleofspine = -pi/2 ,
-anglerighthumerus =  -pi/6,
+anglerighthumerus =  -pi/16,
 anglelefthumerus = pi + pi/6,
-anglerightradius = -pi/3,
-angleleftradius = -pi/3,
+anglerightradius = pi/2 - pi/4,
+angleleftradius = pi - pi/4,
 anglerightleg = 3*pi/2 - pi / 12,
 angleleftleg = 3*pi/2 + pi / 12 ,
 angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
 
-g <- ggplot() + 
+ g <- ggplot() + 
   # xkcdaxis(xrange,yrange) +
   xkcdman(mapping,linetype = 3, dataman) + 
   theme_void() +
@@ -227,9 +240,9 @@ dataman <- data.frame(x= 0, y= 2,
 scale = 2,
 ratioxy = ratioxy,
 angleofspine = -pi/2 ,
-anglerighthumerus =  -pi/6,
+anglerighthumerus =  -pi/12,
 anglelefthumerus = pi + pi/6,
-anglerightradius = -pi/3,
+anglerightradius = pi/2 - pi/4,
 angleleftradius = -pi/3,
 anglerightleg = 3*pi/2 - pi / 12,
 angleleftleg = 3*pi/2 + pi / 12 ,
@@ -297,10 +310,10 @@ dataman <- data.frame(x= 0, y= 2,
 scale = 2,
 ratioxy = ratioxy,
 angleofspine = -pi/2 ,
-anglerighthumerus =  -pi/6,
+anglerighthumerus =  -pi/6 - 135*pi/180,
 anglelefthumerus = pi + pi/6,
-anglerightradius = -pi/3,
-angleleftradius = -pi/3,
+anglerightradius = -pi/3 - 3*pi/4,
+angleleftradius = -pi/3 - pi/2,
 anglerightleg = 3*pi/2 - pi / 12,
 angleleftleg = 3*pi/2 + pi / 12 ,
 angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
@@ -332,7 +345,38 @@ l <- clean_coal |>
     theme(text = element_text('xkcd'),
           legend.position = "top") +
   facet_wrap( ~ trade) # TODO to animate graphs above 
-k + l + k
+
+
+
+dataman2 <- data.frame(x= 0, y= 2,
+scale = 2,
+ratioxy = ratioxy,
+angleofspine = -pi/2 ,
+anglerighthumerus =  -pi/6,
+anglelefthumerus =  pi/16,
+anglerightradius = pi/16,
+angleleftradius = -pi/12 + pi/4,
+anglerightleg = 3*pi/2 - pi / 12,
+angleleftleg = 3*pi/2 + pi / 12 ,
+angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
+
+
+m <- ggplot() + 
+  # xkcdaxis(xrange,yrange) +
+  xkcdman(mapping,linetype = 3, dataman2) + 
+  theme_void() +
+  # this will allow the text outside of the plot panel
+  coord_cartesian(clip = 'off',
+                  expand = FALSE) +
+  annotate("richtext", x = 3, y = 5, ymax = 10,xmin = -4,xmax = 10,  label = "Here we can <br>see the progression <br>of the trade values over <br>the years since 2005", family = "xkcd",
+           fill = "lightgrey") +
+  theme(line = element_blank(),
+        text = element_text('xkcd')) +
+  # annotate("rect", xmin = 2, xmax = 5, ymin = 4.5, ymax = 10,
+  # alpha = .2) +
+  annotate("segment",x = 0.9, xend = 1.5 ,
+             y = 2.5, yend = 3.2) 
+k + l + m
 ```
 
 ------------------------------------------------------------------------
@@ -342,28 +386,20 @@ Note:
 -   The imports values were way higher in the earlier years as compared to recently, which i think is a good sign
 -   The exports values are moving in the opposite direction, which is also a good thing
 
-### The cost of producing coal has gone up over the years
+### The cost of producing coal has gone up over the years .. and so has the value
 
 ```{r}
-clean_coal |> 
+n <- clean_coal |> 
   ggplot(aes(year, coal_rent_pct_of_gdp)) + 
   geom_line() +
   scale_y_continuous(labels = scales::percent)
-```
 
-### .. and so has the value
-
-```{r}
-clean_coal |> 
+o <- clean_coal |> 
   ggplot(aes(year, natural_capital)) + 
   geom_line()+
   scale_y_continuous(labels = scales::dollar)
-```
 
-### These two variables showed a high correlation of `r cor(clean_coal$coal_rent_pct_of_gdp, clean_coal$natural_capital)` throughout the years
-
-```{r}
-clean_coal |> 
+p <- clean_coal |> 
   ggplot(aes(coal_rent_pct_of_gdp, natural_capital, group = as.factor(year))) + 
   geom_point(alpha = 0.7) +
   geom_smooth(group = 1,
@@ -373,4 +409,38 @@ clean_coal |>
   scale_y_continuous(labels = scales::dollar) +
   scale_x_continuous(labels = scales::percent)
 
+dataman2 <- data.frame(x= 0, y= 2,
+scale = 2,
+ratioxy = ratioxy,
+angleofspine = -pi/2 ,
+anglerighthumerus =  -pi/6,
+anglelefthumerus =  pi/16,
+anglerightradius = pi/16,
+angleleftradius = -pi/12 + pi/4,
+anglerightleg = 3*pi/2 - pi / 12,
+angleleftleg = 3*pi/2 + pi / 12 ,
+angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
+
+
+q <- ggplot() + 
+  # xkcdaxis(xrange,yrange) +
+  xkcdman(mapping,linetype = 3, dataman2) + 
+  theme_void() +
+  # this will allow the text outside of the plot panel
+  coord_cartesian(clip = 'off',
+                  expand = FALSE) +
+  annotate("richtext", x = 3, y = 5, ymax = 10,xmin = -4,xmax = 10,  label = "These two variables <br>showed a high correlation<br> throughout the years", family = "xkcd",
+           fill = "lightgrey") +
+  theme(line = element_blank(),
+        text = element_text('xkcd')) +
+  # annotate("rect", xmin = 2, xmax = 5, ymin = 4.5, ymax = 10,
+  # alpha = .2) +
+  annotate("segment",x = 0.9, xend = 1.5 ,
+             y = 2.5, yend = 3.2) 
+
+(n + o) / (q + p)
+
 ```
+
+
+

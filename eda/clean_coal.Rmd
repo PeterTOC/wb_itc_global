@@ -133,8 +133,8 @@ clean_coal |>
 clean_coal |> 
   tabyl(trade,partner_iso)
 
-#to simply have a dataframe of export countries and one for import countries
-# the 
+
+
 ```
  
 
@@ -226,7 +226,16 @@ countries_metadata <- countries_metadata |>
 
 #create data frames for the partner and reporter countries
 partner_coord <- partner_countries |> 
-  left_join(countries_metadata, by = c("partner_iso" = "alpha_3_code"))
+  left_join(countries_metadata, by = c("partner_iso" = "alpha_3_code")) |> 
+  distinct(latitude,longitude, .keep_all = TRUE) 
+
+#to simply have a dataframe of export countries and one for import countries
+partner_imp <- clean_coal |> filter(trade == "imp") |> distinct(partner_iso)
+partner_exp <- clean_coal |> filter(trade == "exp") |> distinct(partner_iso)
+
+#separate the data by trade type
+partner_coord_imp <- partner_imp |> left_join(partner_coord, by = "partner_iso") 
+partner_coord_exp <- partner_exp |> left_join(partner_coord, by = "partner_iso") 
 
 reporter_coord <- reporter_countries |> 
   left_join(countries_metadata, by = c("reporter_iso" = "alpha_3_code"))
@@ -245,10 +254,16 @@ points(partner_coord$longitude,
        cex=0.1,
        col = "red")
 
-# create the connections
-for (i in (1:dim(partner_coord)[1])) { 
-inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord$longitude[i], partner_coord$latitude[i]), n=200)
+# create the connections for imports
+for (i in (1:dim(partner_coord_imp)[1])) { 
+inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_imp$longitude[i], partner_coord_imp$latitude[i]), n=200)
 lines(inter, lwd=0.5, col="yellow")    
+}
+
+# create the connections for export
+for (i in (1:dim(partner_coord_exp)[1])) { 
+inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_exp$longitude[i], partner_coord_exp$latitude[i]), n=200)
+lines(inter, lwd=0.5, col="green")    
 }
 
 
