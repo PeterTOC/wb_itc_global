@@ -51,7 +51,7 @@ clean_coal <- read_rds(file_raw)
 
 <center>
 
-<h4>**Tanzania Coal Trade**: the disparity between [**imports**]{style="color:yellow"} and <span style='color:green'>**exports**<span>.</h4>
+<h4>**Tanzania Coal Trade**: the disparity between [**imports**]{style="color:orange"} and <span style='color:darkgreen'>**exports**<span>.</h4>
 
 </center>
 
@@ -114,13 +114,13 @@ points(partner_coord$longitude,
 # create the connections for imports
 for (i in (1:dim(partner_coord_imp)[1])) { 
 inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_imp$longitude[i], partner_coord_imp$latitude[i]), n=200)
-lines(inter, lwd=1, col="yellow")    
+lines(inter, lwd=1, col="orange")    
 }
 
 # create the connections for export
 for (i in (1:dim(partner_coord_exp)[1])) { 
 inter <- gcIntermediate(c(reporter_coord$longitude[1], reporter_coord$latitude[1]), c(partner_coord_exp$longitude[i], partner_coord_exp$latitude[i]), n=200)
-lines(inter, lwd=1, col="green")    
+lines(inter, lwd=1, col="darkgreen")    
 }
 
 
@@ -133,6 +133,8 @@ lines(inter, lwd=1, col="green")
 
 thematic::thematic_off()
 
+
+#xkcd stickman
 
 xrange <- c(0,20) # might need to change range
 yrange <- c(0,30) # might need to change range
@@ -167,8 +169,8 @@ angleofneck = runif(1, 3*pi/2-pi/10, 3*pi/2+pi/10))
   theme_void() +
   # this will allow the text outside of the plot panel
   coord_cartesian(clip = 'off',
-                  expand = FALSE) +
-  annotate("richtext", x = 3, y = 5.4, ymax = 10,xmin = -4,xmax = 10,  label = "The total value<br>of <span style='color:green'>exports</span> had never <br>exceeded the $100,000 <br>mark prior to 2013, <br>while <span style='color:yellow'>imports</span> have always <br>been up there..", family = "xkcd",
+                  expand = TRUE) +
+  annotate("richtext", x = 3, y = 5.4, ymax = 10,xmin = -4,xmax = 10,  label = "The total value<br>of <span style='color:darkgreen'>exports</span> had never <br>exceeded the $100,000 <br>mark prior to 2013, <br>while <span style='color:orange'>imports</span> have always <br>been up there..", family = "xkcd",
            fill = "lightgrey") +
   theme(line = element_blank(),
         text = element_text('xkcd')) +
@@ -201,11 +203,39 @@ h <- clean_coal_sum |>
            stat = "identity",
            alpha = 0.7,
            color = "black") + 
+  geom_hline(yintercept = 100000,
+             lty = 2,
+             color = "red") +
   scale_y_log10(labels = scales::dollar)+
    scale_fill_manual(values = c("imp" = "orange","exp" = "darkgreen")) +
+  labs(y = "", x = "", title = "Trade value in USD \nalong the years") +
+  theme_void()+
     theme(text = element_text('xkcd'),
-          legend.position = "top")
-g + h
+          legend.position = "none",
+          axis.text.y = element_text())+
+  # this will allow the text outside of the plot panel
+  coord_cartesian(clip = 'off',
+                  expand = TRUE)
+
+# pie chart
+piedata <- clean_coal_sum |>
+  summarise(total_imp = sum(total_imp),
+            total_exp = sum(total_exp)) |> 
+  pivot_longer(everything(),names_to = "total", values_to = "values") |> 
+  mutate(percent = scales::percent(values/sum(values))) |> 
+  mutate(ypos = cumsum(values) - 0.5*values)
+
+
+f <- ggplot(piedata, aes(x="", y=values, fill=total)) +
+    geom_bar(stat="identity", width=1, color = "black") +
+    coord_polar("y", start=0, clip = 'on') +
+   scale_fill_manual(values = c("total_imp" = "orange","total_exp" = "darkgreen")) +
+  theme_void() +
+  geom_text(aes(y = ypos, label = percent), color = "black", size = 4) + 
+  theme(legend.position="none") +
+  coord_cartesian()
+
+f + g + h
 
 ```
 
@@ -214,7 +244,7 @@ g + h
 Note:
 
 -   The y axis is in log scale, so instead of a <br>1, 2, 3... progression expect a <br>1, 10, 100... progression
--   The data from the point where the export value substantially increases is missing, which is data of 2013.
+-   The data from the point where the export value substantially increases is missing, which is data of 2012.
 
 ### Number of trades with high value
 
